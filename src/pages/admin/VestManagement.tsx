@@ -3,6 +3,7 @@ import { toast, Toaster } from "react-hot-toast";
 import { useUser } from "../../context/UserContext";
 import { useNavigate } from "react-router";
 import { getApiUrl, API_CONFIG, getStorageUrl } from "../../config/api";
+import imageCompression from "browser-image-compression";
 
 interface Vest {
   id: number;
@@ -62,44 +63,56 @@ const VestManagement: React.FC = () => {
     }
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      // Check file size (10MB limit)
-      if (file.size > MAX_FILE_SIZE) {
-        toast.error(
-          `File quá lớn! Kích thước tối đa: ${
-            MAX_FILE_SIZE / 1024 / 1024
-          }MB. File của bạn: ${(file.size / 1024 / 1024).toFixed(2)}MB`
-        );
-        e.target.value = ""; // Reset input
+    if (!file) return;
+
+    // Check file type first
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Chỉ chấp nhận file ảnh: JPG, PNG, WEBP");
+      e.target.value = "";
+      return;
+    }
+
+    try {
+      toast.loading("Đang nén ảnh...", { id: "compress" });
+
+      const options = {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+        fileType: file.type,
+      };
+
+      const compressedFile = await imageCompression(file, options);
+
+      toast.success(
+        `Đã nén: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(
+          compressedFile.size /
+          1024 /
+          1024
+        ).toFixed(2)}MB`,
+        { id: "compress" }
+      );
+
+      if (compressedFile.size > MAX_FILE_SIZE) {
+        toast.error(`Ảnh vẫn quá lớn sau khi nén!`);
+        e.target.value = "";
         return;
       }
 
-      // Check file type
-      const allowedTypes = [
-        "image/jpeg",
-        "image/jpg",
-        "image/png",
-        "image/webp",
-      ];
-      if (!allowedTypes.includes(file.type)) {
-        toast.error("Chỉ chấp nhận file ảnh: JPG, PNG, WEBP");
-        e.target.value = ""; // Reset input
-        return;
-      }
+      setImageFile(compressedFile);
 
-      setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
       };
-      reader.readAsDataURL(file);
-
-      // Show file info
-      toast.success(
-        `Đã chọn file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`
-      );
+      reader.readAsDataURL(compressedFile);
+    } catch (error) {
+      console.error("Lỗi khi nén ảnh:", error);
+      toast.error("Không thể nén ảnh. Vui lòng thử lại.");
+      e.target.value = "";
     }
   };
 
