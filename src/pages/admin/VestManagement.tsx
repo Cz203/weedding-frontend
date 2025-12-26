@@ -147,10 +147,21 @@ const VestManagement: React.FC = () => {
         resetForm();
         fetchVests();
       } else {
-        toast.error(data.message || "Có lỗi xảy ra");
+        // Hiển thị lỗi chi tiết từ validation
+        if (data.errors) {
+          const errorMessages = Object.values(data.errors).flat();
+          errorMessages.forEach((msg) => toast.error(msg as string));
+        } else {
+          toast.error(data.message || "Có lỗi xảy ra");
+        }
+        // Log chi tiết lỗi để debug
+        console.error("Backend error:", data);
       }
-    } catch {
-      toast.error("Không thể kết nối đến server");
+    } catch (error) {
+      console.error("Lỗi kết nối:", error);
+      toast.error(
+        "Không thể kết nối đến server. Kiểm tra console để biết chi tiết."
+      );
     }
   };
 

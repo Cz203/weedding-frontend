@@ -172,10 +172,14 @@ const AlbumManagement: React.FC = () => {
         } else {
           toast.error(data.message || "Có lỗi xảy ra");
         }
+        // Log chi tiết lỗi để debug
+        console.error("Backend error:", data);
       }
     } catch (error) {
-      console.error("Lỗi khi submit form:", error);
-      toast.error("Không thể kết nối đến server");
+      console.error("Lỗi kết nối:", error);
+      toast.error(
+        "Không thể kết nối đến server. Kiểm tra console để biết chi tiết."
+      );
     }
   };
 
